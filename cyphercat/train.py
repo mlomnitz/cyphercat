@@ -303,7 +303,7 @@ def distill_training(teacher=None, learner=None, data_loader=None,
 def inf_adv_train(target_model=None, inf_model=None, train_set=None,
                   test_set=None, inf_in_set=None, target_optim=None,
                   target_criterion=None, inf_optim=None, inf_criterion=None,
-                  n_epochs=0, privacy_theta=0, verbose=False):
+                  n_epochs=0, privacy_theta=0, k=0, verbose=False):
     """Method to run adversarial training during membership inference
 
     Args:
@@ -380,11 +380,15 @@ def inf_adv_train(target_model=None, inf_model=None, train_set=None,
             inf_optim.zero_grad()
 
             train_inference = inf_model(train_posteriors,
-                                        label_to_onehot(train_lbl).to(device))
+                                        label_to_onehot(train_lbl, num_classes=k).to(device))
+            #train_top_k = train_sort[:, :k].clone().to(device)
+#            train_inference = inf_model(train_top_k)
             train_inference = torch.squeeze(train_inference)
             #
             out_inference = inf_model(out_posteriors,
-                                      label_to_onehot(out_lbl).to(device))
+                                      label_to_onehot(out_lbl, num_classes=k).to(device))
+#            out_top_k = out_sort[:, :k].clone().to(device)
+#            out_inference = inf_model(out_top_k)
             out_inference = torch.squeeze(out_inference)
             #
             total_inference += 2*mini_batch_size
@@ -409,11 +413,10 @@ def inf_adv_train(target_model=None, inf_model=None, train_set=None,
         train_posteriors = fcnal.softmax(outputs, dim=1)
 
         loss_classification = target_criterion(outputs, train_lbls)
-        train_lbl = torch.ones(mini_batch_size).to(device)
-        
         train_inference = inf_model(train_posteriors,
-                                    label_to_onehot(train_lbls).to(device))
+                                    label_to_onehot(train_lbls, num_classes=k).to(device))
         train_inference = torch.squeeze(train_inference)
+        train_lbl = torch.ones(train_inference.shape).to(device)
         loss_infer = inf_criterion(train_inference, train_lbl)
         loss = loss_classification - privacy_theta * loss_infer
         

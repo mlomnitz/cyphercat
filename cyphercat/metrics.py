@@ -116,7 +116,8 @@ def eval_attack_model(attack_model=None, target=None,
 
     for i, ((train_imgs, _), (out_imgs, _)) in enumerate(zip(target_train,
                                                              target_out)):
-
+        if train_imgs.shape[0] != out_imgs.shape[0]:
+            continue
         train_imgs, out_imgs = train_imgs.to(device), out_imgs.to(device)
 
         # [mini_batch_size x num_classes] tensors,
@@ -268,3 +269,7 @@ def eval_membership_inference(target_model=None,
         print("threshold = {:.4f}, accuracy = {:.2f},"
               "precision = {:.2f}, recall = {:.2f}"
               .format(t, accuracy, precision, recall))
+    data = np.transpose([thresholds, accuracies, precisions, recalls])
+    df_pr = pd.DataFrame(columns=['Thresholds', 'Accuracy', 'Precision',
+                                  'Recall'], data=data)
+    return df_pr
